@@ -120,9 +120,14 @@ export const request = async ({
 
         if (!response.ok) {
             if (response.status === 401 && !isServer) {
-                // return handleResponse({ endpoint, method, body, headers, source, jsonType })
+                if (!isServer) {
+                    window.location.href = '/login'
+                }
+
                 console.log('Unauthorized ----->', response)
             } else if (response.status === 503) {
+
+
                 window.location.href = '/maintanance'
             }
 
