@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 
-import { getSession, signIn } from 'next-auth/react'
+import { getSession } from 'next-auth/react'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth'
 
@@ -23,12 +23,11 @@ const getToken = async (refresh?: boolean): Promise<string | null> => {
 
 const getUrl = (endpoint: string) => `${API_BASE_URL}/${endpoint}`;
 
-
 const handleResponse = async ({ endpoint, method, body, headers, source, jsonType }: any): Promise<any> => {
     const refreshToken = await getToken(true);
 
     if (!refreshToken) {
-        console.error('No access token found')
+        console.error('No refresh token found');
 
         return;
     }
@@ -36,56 +35,36 @@ const handleResponse = async ({ endpoint, method, body, headers, source, jsonTyp
     try {
         const refreshTokenResponse = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refreshToken }),
             credentials: 'include',
-        })
+        });
 
-        const refreshTokenData = await refreshTokenResponse.json()
+        const refreshTokenData = await refreshTokenResponse.json();
 
         if (refreshTokenData.status === 'success') {
-            // 👇 Call NextAuth signIn('credentials') to update the session
-            // only in client side 
+            const newAccessToken = refreshTokenData.data.tokens.accessToken;
 
-            if (isServer) {
-                const session = await getServerSession(authOptions);
-
-                if (session) {
-                    await update({
-                        ...session,
-                        accessToken: refreshTokenData.data.tokens.accessToken,
-                        refreshToken: refreshTokenData.data.tokens.refreshToken,
-                        user: refreshTokenData.data.user,
-                    });
-                }
-            } else {
-                await signIn('credentials', {
-                    redirect: false,
-                    accessToken: refreshTokenData.data.tokens.accessToken,
-                    refreshToken: refreshTokenData.data.tokens.refreshToken,
-                    user: refreshTokenData.data.user,
-                })
-            }
-
-
-
+            // 👇 RETRY request with new access token
             return await request({
                 endpoint,
                 method,
                 body,
-                headers,
+                headers: {
+                    ...headers,
+                    Authorization: `Bearer ${newAccessToken}`
+                },
                 source,
                 jsonType
-            })
+            });
         } else {
-            console.log('Refresh Token Error ----->', refreshTokenData)
+            console.log('Refresh Token Error ----->', refreshTokenData);
         }
     } catch (error) {
-        console.log('Handle response error ----->', error)
+        console.log('Handle response error ----->', error);
     }
 }
+
 
 export const request = async ({
     endpoint,
@@ -140,8 +119,9 @@ export const request = async ({
         const response = await fetch(url, fetchOptions)
 
         if (!response.ok) {
-            if (response.status === 401) {
-                return handleResponse({ endpoint, method, body, headers, source, jsonType })
+            if (response.status === 401 && !isServer) {
+                // return handleResponse({ endpoint, method, body, headers, source, jsonType })
+                console.log('Unauthorized ----->', response)
             } else if (response.status === 503) {
                 window.location.href = '/maintanance'
             }

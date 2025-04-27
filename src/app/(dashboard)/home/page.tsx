@@ -8,7 +8,7 @@ const Home = async () => {
 
   return (
     <div>
-      <h1>test</h1>
+      <h1>Total: {result?.data?.length}</h1>
       <Test />
     </div>
   );

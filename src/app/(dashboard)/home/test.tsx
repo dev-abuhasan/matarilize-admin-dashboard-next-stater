@@ -1,24 +1,45 @@
 'use client';
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { getCompanies } from "@/contexts/api";
 
 const Test = () => {
+    const [counter, setCounter] = useState(30);
 
-    // useEffect(() => {
-    //     const getData = async () => {
-    //         const res = await getCompanies();
+    useEffect(() => {
+        const getData = async () => {
+            const res = await getCompanies();
 
-    //         console.log(res)
-    //     }
+            console.log(res);
+        };
 
-    //     getData();
-    // }, [])
+        getData();
+    }, []);
+
+
+    const handleClick = async () => {
+        setCounter(30);
+        const res = await getCompanies();
+
+        console.log(res);
+    }
+
+    useEffect(() => {
+        if (counter > 0) {
+            const timer = setInterval(() => {
+                setCounter((prev) => prev - 1);
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }
+    }, [counter]);
 
     return (
         <div>
+            <h1>Counter: {counter}s</h1>
             <h1>Tes</h1>
+            <button onClick={() => handleClick()}>Call</button>
         </div>
     );
 };
