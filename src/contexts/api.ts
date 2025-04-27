@@ -23,47 +23,47 @@ const getToken = async (refresh?: boolean): Promise<string | null> => {
 
 const getUrl = (endpoint: string) => `${API_BASE_URL}/${endpoint}`;
 
-const handleResponse = async ({ endpoint, method, body, headers, source, jsonType }: any): Promise<any> => {
-    const refreshToken = await getToken(true);
+// const handleResponse = async ({ endpoint, method, body, headers, source, jsonType }: any): Promise<any> => {
+//     const refreshToken = await getToken(true);
 
-    if (!refreshToken) {
-        console.error('No refresh token found');
+//     if (!refreshToken) {
+//         console.error('No refresh token found');
 
-        return;
-    }
+//         return;
+//     }
 
-    try {
-        const refreshTokenResponse = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-            credentials: 'include',
-        });
+//     try {
+//         const refreshTokenResponse = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({ refreshToken }),
+//             credentials: 'include',
+//         });
 
-        const refreshTokenData = await refreshTokenResponse.json();
+//         const refreshTokenData = await refreshTokenResponse.json();
 
-        if (refreshTokenData.status === 'success') {
-            const newAccessToken = refreshTokenData.data.tokens.accessToken;
+//         if (refreshTokenData.status === 'success') {
+//             const newAccessToken = refreshTokenData.data.tokens.accessToken;
 
-            // 👇 RETRY request with new access token
-            return await request({
-                endpoint,
-                method,
-                body,
-                headers: {
-                    ...headers,
-                    Authorization: `Bearer ${newAccessToken}`
-                },
-                source,
-                jsonType
-            });
-        } else {
-            console.log('Refresh Token Error ----->', refreshTokenData);
-        }
-    } catch (error) {
-        console.log('Handle response error ----->', error);
-    }
-}
+//             // 👇 RETRY request with new access token
+//             return await request({
+//                 endpoint,
+//                 method,
+//                 body,
+//                 headers: {
+//                     ...headers,
+//                     Authorization: `Bearer ${newAccessToken}`
+//                 },
+//                 source,
+//                 jsonType
+//             });
+//         } else {
+//             console.log('Refresh Token Error ----->', refreshTokenData);
+//         }
+//     } catch (error) {
+//         console.log('Handle response error ----->', error);
+//     }
+// }
 
 
 export const request = async ({
