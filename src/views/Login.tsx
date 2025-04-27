@@ -4,7 +4,7 @@
 import { useState } from 'react'
 
 // Next Imports
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // MUI Imports
 import Typography from '@mui/material/Typography'
@@ -14,12 +14,15 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Checkbox from '@mui/material/Checkbox'
 import Button from '@mui/material/Button'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import Divider from '@mui/material/Divider'
 
 // Third-party Imports
 import classnames from 'classnames'
 
 // Type Imports
+import { signIn } from 'next-auth/react'
+
+import { Controller, useForm, type SubmitHandler } from 'react-hook-form'
+
 import type { Mode } from '@core/types'
 
 // Component Imports
@@ -33,9 +36,19 @@ import themeConfig from '@configs/themeConfig'
 import { useImageVariant } from '@core/hooks/useImageVariant'
 import { useSettings } from '@core/hooks/useSettings'
 
+type ErrorType = {
+  message: string[]
+}
+
+type FormData = {
+  email: string
+  password: string
+}
+
 const LoginV2 = ({ mode }: { mode: Mode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
+  const [errorState, setErrorState] = useState<ErrorType | null>(null)
 
   // Vars
   const darkImg = '/images/pages/auth-v2-mask-1-dark.png'
@@ -46,8 +59,22 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
   const borderedLightIllustration = '/images/illustrations/auth/v2-login-light-border.png'
 
   // Hooks
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { settings } = useSettings()
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<FormData>({
+    // resolver: valibotResolver(schema),
+    defaultValues: {
+      email: 'abu@vysy.tech',
+      password: 'admin1234'
+    }
+  })
+
   const authBackground = useImageVariant(mode, lightImg, darkImg)
 
   const characterIllustration = useImageVariant(
@@ -59,6 +86,30 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
   )
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
+
+
+  const onSubmit: SubmitHandler<FormData> = async (data: FormData) => {
+    const res = await signIn('credentials', {
+      email: data.email,
+      password: data.password,
+      redirect: false
+    })
+
+    if (res && res.ok && res.error === null) {
+      // Vars
+      const redirectURL = searchParams.get('redirectTo') ?? '/'
+
+      router.replace(redirectURL)
+    } else {
+      console.log(res)
+
+      if (res?.error) {
+        const error = JSON.parse(res.error)
+
+        setErrorState(error)
+      }
+    }
+  }
 
   return (
     <div className='flex bs-full justify-center'>
@@ -90,38 +141,76 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
           </div>
           <form
             noValidate
+            action={() => { }}
             autoComplete='off'
-            onSubmit={e => {
-              e.preventDefault()
-              router.push('/')
-            }}
+            onSubmit={handleSubmit(onSubmit)}
             className='flex flex-col gap-5'
           >
-            <TextField autoFocus fullWidth label='Email' />
-            <TextField
-              fullWidth
-              label='Password'
-              type={isPasswordShown ? 'text' : 'password'}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position='end'>
-                      <IconButton
-                        size='small'
-                        edge='end'
-                        onClick={handleClickShowPassword}
-                        onMouseDown={e => e.preventDefault()}
-                      >
-                        <i className={isPasswordShown ? 'ri-eye-off-line' : 'ri-eye-line'} />
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }
-              }}
+            <Controller
+              name='email'
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  autoFocus
+                  type='email'
+                  label='Email'
+                  onChange={e => {
+                    field.onChange(e.target.value)
+                    errorState !== null && setErrorState(null)
+                  }}
+                  {...((errors.email || errorState !== null) && {
+                    error: true,
+                    helperText: errors?.email?.message || errorState?.message[0]
+                  })}
+                />
+              )}
+            />
+            <Controller
+              name='password'
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Password'
+                  id='login-password'
+                  type={isPasswordShown ? 'text' : 'password'}
+                  onChange={e => {
+                    field.onChange(e.target.value)
+                    errorState !== null && setErrorState(null)
+                  }}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position='end'>
+                          <IconButton
+                            edge='end'
+                            onClick={handleClickShowPassword}
+                            onMouseDown={e => e.preventDefault()}
+                            aria-label='toggle password visibility'
+                          >
+                            <i className={isPasswordShown ? 'ri-eye-off-line' : 'ri-eye-line'} />
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }
+                  }}
+                  {...(errors.password && { error: true, helperText: errors.password.message })}
+                />
+              )}
             />
             <div className='flex justify-between items-center flex-wrap gap-x-3 gap-y-1'>
-              <FormControlLabel control={<Checkbox />} label='Remember me' />
-              <Typography className='text-end' color='primary.main' component={Link}>
+              <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
+              <Typography
+                className='text-end'
+                color='primary.main'
+                component={Link}
+                href={'/forgot-password'}
+              >
                 Forgot password?
               </Typography>
             </div>
@@ -130,24 +219,9 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
             </Button>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>New on our platform?</Typography>
-              <Typography component={Link} color='primary.main'>
+              <Typography component={Link} href={'/register'} color='primary.main'>
                 Create an account
               </Typography>
-            </div>
-            <Divider className='gap-3 text-textPrimary'>or</Divider>
-            <div className='flex justify-center items-center gap-2'>
-              <IconButton size='small' className='text-facebook'>
-                <i className='ri-facebook-fill' />
-              </IconButton>
-              <IconButton size='small' className='text-twitter'>
-                <i className='ri-twitter-fill' />
-              </IconButton>
-              <IconButton size='small' className='text-textPrimary'>
-                <i className='ri-github-fill' />
-              </IconButton>
-              <IconButton size='small' className='text-googlePlus'>
-                <i className='ri-google-fill' />
-              </IconButton>
             </div>
           </form>
         </div>
