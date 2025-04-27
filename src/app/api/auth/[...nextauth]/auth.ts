@@ -26,31 +26,6 @@ declare module 'next-auth' {
   }
 }
 
-// async function refreshAccessToken(refreshToken: string) {
-//   try {
-//     const response = await fetch(`http://localhost:5000/api/auth/refresh-token`, {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({ refreshToken }),
-//     })
-
-//     const data = await response.json()
-
-//     if (!response.ok) throw new Error(data.message)
-
-//     return {
-//       accessToken: data.data.tokens.accessToken,
-//       accessTokenExpires: Date.now() + 15 * 60 * 1000, // assume 15min expiry
-//       refreshToken: data.data.tokens.refreshToken ?? refreshToken, // fallback
-//       user: data.data.user,
-//     }
-//   } catch (error) {
-//     console.error("Refresh token failed:", error)
-
-//     return null
-//   }
-// }
-
 const refreshAccessToken = async (refreshToken: string) => {
   try {
     const response = await fetch(`http://localhost:5000/api/auth/refresh-token`, {
@@ -133,17 +108,6 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }: { token: any; user?: any }) {
-
-      // if (trigger === 'update' && session) {
-      //   return {
-      //     ...token,
-      //     ...session,
-      //     user: session.user && typeof session.user === 'object'
-      //       ? { ...(typeof token.user === 'object' ? token.user : {}), ...session.user }
-      //       : token.user
-      //   };
-      // }
-
       if (user) {
         token.user = user  // Save full user object
         token.accessToken = user.accessToken
@@ -169,14 +133,6 @@ export const authOptions: NextAuthOptions = {
           }
         }
       }
-
-
-
-
-      if (typeof token.accessTokenExpires === 'number' && Date.now() < token.accessTokenExpires) {
-        return token;
-      }
-
 
       return token
     },
